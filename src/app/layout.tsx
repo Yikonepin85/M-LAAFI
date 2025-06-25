@@ -5,11 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
-  title: "M'LAAFI Health Manager",
+  title: "M'LAAFI",
   description: 'Application mobile de gestion personnelle de la santé.',
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
+    icon: '/icons/icon-with-name-192x192.png',
+    apple: '/icons/icon-with-name-192x192.png',
   },
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#148564" />
+        <meta name="theme-color" content="#46b8a0" />
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
