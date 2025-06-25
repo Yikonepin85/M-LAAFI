@@ -4,8 +4,9 @@
   "description": "Application mobile de gestion personnelle de la santé.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#148564",
+  "background_color": "#EAFBF6",
   "theme_color": "#148564",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -36,7 +37,7 @@
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-384x384.png",

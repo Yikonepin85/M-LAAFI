@@ -7,6 +7,10 @@ import { AuthProvider } from '@/context/AuthContext';
 export const metadata: Metadata = {
   title: "M'LAAFI Health Manager",
   description: 'Application mobile de gestion personnelle de la santé.',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
 };
 
 export default function RootLayout({
