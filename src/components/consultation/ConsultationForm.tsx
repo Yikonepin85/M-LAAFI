@@ -8,15 +8,14 @@ import { ConsultationSchema } from '@/lib/schemas';
 import type { Consultation, Patient } from '@/types';
 import { PROFESSIONAL_TITLES, MEDICAL_SPECIALTIES, GENDERS } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { differenceInYears, parseISO, isValid } from 'date-fns';
+import Link from 'next/link';
 
 
 type ConsultationFormData = Omit<Consultation, 'id' | 'createdAt' | 'imc' | 'imcCategory'>;
@@ -28,9 +27,11 @@ interface ConsultationFormProps {
 }
 
 const defaultValues: ConsultationFormData = {
+  patientId: '',
   caregiver: { name: '', title: PROFESSIONAL_TITLES[0], specialty: '' },
   patient: { firstName: '', lastName: '', sex: GENDERS[0], age: 0 },
   vitals: { weight: undefined, height: undefined, bloodPressure: '', heartRate: undefined, temperature: undefined },
+  medicalHistory: '',
   notes: '',
   hasAppointment: false,
   appointmentType: '',
@@ -60,11 +61,17 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
         hasAppointment: initialData.hasAppointment === undefined ? false : initialData.hasAppointment,
         appointmentType: initialData.appointmentType || '',
         location: initialData.location || { establishment: '', address: '' },
+        medicalHistory: initialData.medicalHistory || '',
     } : defaultValues,
   });
 
   const [patients] = useLocalStorage<Patient[]>('patients', []);
-  const [isPatientSelected, setIsPatientSelected] = React.useState(!!initialData?.patient?.firstName);
+  const selectedPatientId = form.watch('patientId');
+
+  const selectedPatient = React.useMemo(() => {
+    if (!selectedPatientId) return null;
+    return patients.find(p => p.id === selectedPatientId);
+  }, [selectedPatientId, patients]);
 
   const selectedTitle = form.watch('caregiver.title');
   const hasAppointmentValue = form.watch('hasAppointment');
@@ -76,23 +83,14 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
   }, [hasAppointmentValue, form]);
 
   const handlePatientSelect = (patientId: string) => {
-    if (patientId === 'manual') {
-      form.reset({
-        ...form.getValues(),
-        patient: defaultValues.patient,
-      });
-      setIsPatientSelected(false);
-      return;
-    }
-
     const patient = patients.find(p => p.id === patientId);
     if (patient) {
       const age = getAgeFromBirthDate(patient.birthDate);
-      form.setValue('patient.firstName', patient.firstName, { shouldValidate: true });
-      form.setValue('patient.lastName', patient.lastName, { shouldValidate: true });
-      form.setValue('patient.sex', patient.sex, { shouldValidate: true });
-      form.setValue('patient.age', age ?? 0, { shouldValidate: true });
-      setIsPatientSelected(true);
+      form.setValue('patientId', patient.id, { shouldValidate: true });
+      form.setValue('patient.firstName', patient.firstName);
+      form.setValue('patient.lastName', patient.lastName);
+      form.setValue('patient.sex', patient.sex);
+      form.setValue('patient.age', age ?? 0);
     }
   };
 
@@ -103,8 +101,73 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <ScrollArea className="max-h-[70vh] p-1">
         <div className="space-y-6 p-2">
+          <section className="space-y-3 p-4 border rounded-lg">
+            <h3 className="text-lg font-semibold font-headline">Informations du Patient</h3>
+            <FormField
+              control={form.control}
+              name="patientId"
+              render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Sélectionner un patient</FormLabel>
+                    <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        handlePatientSelect(value);
+                    }} value={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Choisir un patient..." />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {patients.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    {patients.length === 0 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                          Aucun patient enregistré. <Link href="/patients" className="text-primary underline">Ajouter un patient</Link>
+                      </p>
+                    )}
+                    <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {selectedPatient && (
+              <div className="mt-4 space-y-2 rounded-md border bg-muted/50 p-4">
+                <h4 className="font-semibold text-muted-foreground">Détails du Patient sélectionné</h4>
+                <p><strong>Nom:</strong> {selectedPatient.firstName} {selectedPatient.lastName}</p>
+                <p><strong>Sexe:</strong> {selectedPatient.sex}</p>
+                <p><strong>Âge:</strong> {getAgeFromBirthDate(selectedPatient.birthDate) ?? 'N/A'} ans</p>
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-3 p-4 border rounded-lg">
+            <h3 className="text-lg font-semibold font-headline">Antécédents Médicaux</h3>
+            <FormField
+              control={form.control}
+              name="medicalHistory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Antécédents connus du patient</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Ex: Diabète de type 2, hypertension, allergie à la pénicilline..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Ce champ est facultatif. Renseignez ici les maladies chroniques, allergies ou opérations passées.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
           <section className="space-y-3 p-4 border rounded-lg">
             <h3 className="text-lg font-semibold font-headline">Informations du Soignant</h3>
             <FormField
@@ -181,76 +244,6 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
           </section>
 
           <section className="space-y-3 p-4 border rounded-lg">
-            <h3 className="text-lg font-semibold font-headline">Informations du Patient</h3>
-            
-            <FormItem>
-              <FormLabel>Sélectionner un patient existant</FormLabel>
-                <Select onValueChange={handlePatientSelect} disabled={patients.length === 0}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={patients.length > 0 ? "Choisir pour remplir automatiquement..." : "Aucun patient enregistré"} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="manual">-- Saisie Manuelle --</SelectItem>
-                    {patients.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-            </FormItem>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="patient.firstName" render={({ field }) => (
-                  <FormItem><FormLabel>Prénom</FormLabel><FormControl><Input placeholder="Fatoumata" {...field} readOnly={isPatientSelected} /></FormControl><FormMessage /></FormItem>
-                )}
-              />
-              <FormField control={form.control} name="patient.lastName" render={({ field }) => (
-                  <FormItem><FormLabel>Nom</FormLabel><FormControl><Input placeholder="Traoré" {...field} readOnly={isPatientSelected} /></FormControl><FormMessage /></FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="patient.sex"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sexe</FormLabel>
-                  <FormControl>
-                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                      {GENDERS.map(gender => (
-                        <FormItem key={gender} className="flex items-center space-x-2">
-                          <FormControl><RadioGroupItem value={gender} id={`sex-${gender}`} disabled={isPatientSelected} /></FormControl>
-                          <Label htmlFor={`sex-${gender}`}>{gender}</Label>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField control={form.control} name="patient.age" 
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Âge</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="30"
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      readOnly={isPatientSelected}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </section>
-
-          <section className="space-y-3 p-4 border rounded-lg">
             <h3 className="text-lg font-semibold font-headline">Constantes Vitales</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="vitals.weight" 
@@ -264,7 +257,7 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
                           placeholder="Ex: 65.5" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={field.onChange}
+                          onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.valueAsNumber)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -281,7 +274,7 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
                           placeholder="Ex: 170" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={field.onChange}
+                          onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.valueAsNumber)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -307,7 +300,7 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
                           placeholder="Ex: 72" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={field.onChange}
+                          onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.valueAsNumber)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -325,7 +318,7 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
                           placeholder="Ex: 37.2" 
                           {...field}
                           value={field.value ?? ''}
-                          onChange={field.onChange}
+                          onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.valueAsNumber)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -336,23 +329,37 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
           </section>
 
           <section className="space-y-3 p-4 border rounded-lg">
-            <h3 className="text-lg font-semibold font-headline">Rendez-vous Associé</h3>
+            <h3 className="text-lg font-semibold font-headline">Suites de la consultation</h3>
             <FormField
               control={form.control}
               name="hasAppointment"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Un RDV est-il associé à cette consultation ?</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === 'true')}
-                    value={String(field.value ?? 'false')}
-                  >
-                    <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="true">Oui</SelectItem>
-                      <SelectItem value="false">Non</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <FormItem className="space-y-3">
+                  <FormLabel>Un rendez-vous de suivi est-il nécessaire ?</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={(value) => field.onChange(value === 'true')}
+                      value={String(field.value ?? 'false')}
+                      className="flex flex-col space-y-1"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="true" id="hasAppointment-true" />
+                        </FormControl>
+                        <Label htmlFor="hasAppointment-true" className="font-normal">
+                          Oui, planifier un RDV de suivi
+                        </Label>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="false" id="hasAppointment-false" />
+                        </FormControl>
+                        <Label htmlFor="hasAppointment-false" className="font-normal">
+                          Non, pas de suivi nécessaire pour le moment
+                        </Label>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -379,11 +386,14 @@ const ConsultationForm: React.FC<ConsultationFormProps> = ({ onSubmit, initialDa
           </section>
 
           <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem><FormLabel>Notes d'observation (facultatif)</FormLabel><FormControl><Textarea placeholder="Ex: Patiente se plaint de céphalées depuis 3 jours." {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Notes d'observation</FormLabel><FormControl><Textarea placeholder="Ex: Céphalées depuis 3 jours." {...field} /></FormControl>
+              <FormDescription>
+                Si un examen a été fait sur place, vous pouvez noter les résultats ici.
+              </FormDescription>
+              <FormMessage /></FormItem>
             )}
           />
         </div>
-        </ScrollArea>
       </form>
     </Form>
   );

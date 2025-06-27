@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
   name: 'drugInteractionPrompt',
   input: {schema: DrugInteractionInputSchema},
   output: {schema: DrugInteractionOutputSchema},
-  prompt: `You are an expert pharmacologist AI assistant. Your task is to analyze a list of medications and identify potential drug-drug interactions.
+  prompt: `You are an expert pharmacologist AI assistant. Your task is to analyze a list of medications and identify potential drug-drug interactions. Your responses must be in French.
 
   For the given list of medications, provide a detailed analysis of any potential interactions.
   - If no interactions are found, set hasInteractions to false and provide a reassuring summary.

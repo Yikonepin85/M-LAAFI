@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -9,9 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { checkDrugInteractions, type DrugInteractionOutput } from '@/ai/flows/drug-interaction-flow';
-import type { Medication } from '@/types';
+import type { Medication, Patient } from '@/types';
 import { Loader2, Beaker, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { isAfter, isBefore, isEqual, parseISO, isValid } from 'date-fns';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 interface InteractionCheckerProps {
   isOpen: boolean;
@@ -29,37 +30,27 @@ const getSeverityClass = (severity: 'Mineure' | 'Modérée' | 'Sévère') => {
 };
 
 export default function InteractionChecker({ isOpen, onClose, medications }: InteractionCheckerProps) {
-  const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
+  const [patients] = useLocalStorage<Patient[]>('patients', []);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<DrugInteractionOutput | null>(null);
   const { toast } = useToast();
 
-  const patients = useMemo(() => {
-    const patientNames = new Set(medications.map(m => m.patientFullName).filter(Boolean) as string[]);
-    return Array.from(patientNames).sort();
-  }, [medications]);
+  const selectablePatients = useMemo(() => {
+    const patientIdsWithMeds = new Set(medications.map(m => m.patientId).filter(Boolean));
+    return patients.filter(p => patientIdsWithMeds.has(p.id));
+  }, [medications, patients]);
 
-  const activeMedicationsForSelectedPatient = useMemo(() => {
-    if (!selectedPatient) return [];
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return medications.filter(med => {
-      if (med.patientFullName !== selectedPatient) return false;
-      if (!med.startDate || !med.endDate) return false;
-      const startDate = parseISO(med.startDate);
-      const endDate = parseISO(med.endDate);
-      if (!isValid(startDate) || !isValid(endDate)) return false;
-      return (isEqual(today, startDate) || isAfter(today, startDate)) && (isEqual(today, endDate) || isBefore(today, endDate));
-    });
-  }, [selectedPatient, medications]);
+  const medicationsForSelectedPatient = useMemo(() => {
+    if (!selectedPatientId) return [];
+    return medications.filter(med => med.patientId === selectedPatientId);
+  }, [selectedPatientId, medications]);
 
   const handleCheckInteractions = async () => {
-    if (!selectedPatient || activeMedicationsForSelectedPatient.length < 2) {
+    if (!selectedPatientId || medicationsForSelectedPatient.length < 2) {
       toast({
         title: "Données insuffisantes",
-        description: "Veuillez sélectionner un patient avec au moins deux médicaments actifs.",
+        description: "Veuillez sélectionner un patient avec au moins deux médicaments enregistrés.",
         variant: "destructive",
       });
       return;
@@ -67,16 +58,29 @@ export default function InteractionChecker({ isOpen, onClose, medications }: Int
 
     setIsLoading(true);
     setResult(null);
+    toast({
+        title: "Analyse en cours...",
+        description: "L'IA vérifie les interactions. Veuillez patienter.",
+    });
 
     try {
-      const medicationNames = activeMedicationsForSelectedPatient.map(m => m.name);
+      const medicationNames = medicationsForSelectedPatient.map(m => m.name);
       const response = await checkDrugInteractions({ medications: medicationNames });
-      setResult(response);
+      
+      if (response) {
+          setResult(response);
+          toast({
+            title: "Analyse terminée",
+            description: response.summary || "Les résultats sont disponibles."
+          });
+      } else {
+          throw new Error("L'IA n'a pas retourné de réponse valide.");
+      }
     } catch (error) {
       console.error("Error checking drug interactions:", error);
       toast({
         title: "Erreur de l'IA",
-        description: "Impossible de vérifier les interactions pour le moment.",
+        description: "Impossible de vérifier les interactions. Assurez-vous que votre clé API est valide et que le service est disponible.",
         variant: "destructive",
       });
     } finally {
@@ -88,7 +92,7 @@ export default function InteractionChecker({ isOpen, onClose, medications }: Int
     onClose();
     // Reset state on close after animation
     setTimeout(() => {
-        setSelectedPatient(null);
+        setSelectedPatientId(null);
         setResult(null);
         setIsLoading(false);
     }, 300);
@@ -97,7 +101,7 @@ export default function InteractionChecker({ isOpen, onClose, medications }: Int
   // Reset results when patient changes
   React.useEffect(() => {
       setResult(null);
-  }, [selectedPatient]);
+  }, [selectedPatientId]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -105,31 +109,31 @@ export default function InteractionChecker({ isOpen, onClose, medications }: Int
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Beaker className="h-6 w-6 text-primary"/> Vérificateur d'Interactions Médicamenteuses</DialogTitle>
           <DialogDescription>
-            Sélectionnez un patient pour analyser les interactions potentielles entre ses médicaments actifs.
+            Sélectionnez un patient pour analyser les interactions potentielles entre ses médicaments enregistrés.
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="patient-select">Patient</Label>
-            <Select onValueChange={setSelectedPatient} value={selectedPatient || ''}>
+            <Select onValueChange={setSelectedPatientId} value={selectedPatientId || ''}>
               <SelectTrigger id="patient-select">
                 <SelectValue placeholder="Sélectionner un patient..." />
               </SelectTrigger>
               <SelectContent>
-                {patients.length > 0 ? patients.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>) : <SelectItem value="none" disabled>Aucun patient avec médicament</SelectItem>}
+                {selectablePatients.length > 0 ? selectablePatients.map(p => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>) : <SelectItem value="none" disabled>Aucun patient avec médicament</SelectItem>}
               </SelectContent>
             </Select>
           </div>
 
-          {selectedPatient && (
+          {selectedPatientId && (
             <div>
-              <Label>Médicaments actifs analysés</Label>
+              <Label>Médicaments à analyser pour ce patient</Label>
               <div className="mt-2 text-sm p-3 border rounded-md bg-muted/50 space-y-1 min-h-[60px]">
-                {activeMedicationsForSelectedPatient.length > 0 ? (
-                  activeMedicationsForSelectedPatient.map(m => <p key={m.id}>- {m.name}</p>)
+                {medicationsForSelectedPatient.length > 0 ? (
+                  medicationsForSelectedPatient.map(m => <p key={m.id}>- {m.name}</p>)
                 ) : (
-                  <p className="text-muted-foreground">Aucun médicament actif pour ce patient.</p>
+                  <p className="text-muted-foreground">Aucun médicament enregistré pour ce patient.</p>
                 )}
               </div>
             </div>
@@ -176,7 +180,7 @@ export default function InteractionChecker({ isOpen, onClose, medications }: Int
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose}>Fermer</Button>
-          <Button type="button" onClick={handleCheckInteractions} disabled={isLoading || !selectedPatient || activeMedicationsForSelectedPatient.length < 2}>
+          <Button type="button" onClick={handleCheckInteractions} disabled={isLoading || !selectedPatientId || medicationsForSelectedPatient.length < 2}>
             {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyse...</> : "Lancer l'analyse"}
           </Button>
         </DialogFooter>

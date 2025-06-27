@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import MedicationForm from '@/components/medication/MedicationForm';
 import FormModal from '@/components/shared/FormModal';
-import type { Medication, Consultation } from '@/types';
+import type { Medication, Consultation, Patient } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,32 +55,32 @@ export default function MedicamentsPage() {
   };
 
   useEffect(() => {
-    const consultationIdParam = searchParams.get('consultationId');
     const actionParam = searchParams.get('action');
+    const consultationIdParam = searchParams.get('consultationId');
+    const patientIdParam = searchParams.get('patientId');
+    const patientFullNameParam = searchParams.get('patientFullName');
+    const notesParam = searchParams.get('notes');
 
     if (actionParam === 'add' && !consultationIdParam) {
       openAddModal();
       router.replace('/medicaments', { scroll: false });
       return;
     }
-
-    if (consultationIdParam && !isModalOpen) { 
-      const patientFullNameParam = searchParams.get('patientFullName');
-      const notesParam = searchParams.get('notes'); 
-
+    
+    if ((consultationIdParam || patientIdParam) && !isModalOpen) {
       const dataToPrefill: Partial<MedicationFormData> = {
+        patientId: patientIdParam || '',
         patientFullName: patientFullNameParam || '',
-        consultationId: consultationIdParam,
+        consultationId: consultationIdParam || undefined,
         notes: notesParam || '',
       };
       setPrefillDataForNewMedication(dataToPrefill);
       setEditingMedication(null);
       setIsModalOpen(true);
-      
-      router.replace('/medicaments', { scroll: false }); 
+      router.replace('/medicaments', { scroll: false });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, router]); 
+  }, [searchParams, router]);
 
   useEffect(() => {
     setCurrentTime(new Date()); // Set initial time on mount
@@ -240,8 +240,6 @@ export default function MedicamentsPage() {
         const newMedication: Medication = { 
           ...data, 
           id: Date.now().toString(),
-          consultationId: prefillDataForNewMedication?.consultationId || data.consultationId,
-          patientFullName: prefillDataForNewMedication?.patientFullName || data.patientFullName,
         };
         setMedications(prev => [newMedication, ...prev]);
         toast({ title: "Médicament Ajouté", description: "Nouveau médicament enregistré." });
@@ -318,7 +316,7 @@ export default function MedicamentsPage() {
        <div id="medication-form-in-modal">
         <MedicationForm 
             onSubmit={handleFormSubmit} 
-            initialData={editingMedication || (prefillDataForNewMedication as MedicationFormData) || undefined}
+            initialData={editingMedication || prefillDataForNewMedication || undefined}
             isSubmitting={isSubmitting}
           />
         </div>

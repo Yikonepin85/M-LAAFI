@@ -34,13 +34,15 @@ export default function ExamensPage() {
 
   useEffect(() => {
     const consultationIdParam = searchParams.get('consultationId');
-    if (consultationIdParam) {
-      const patientFullNameParam = searchParams.get('patientFullName');
-      const notesParam = searchParams.get('notes'); 
+    const patientIdParam = searchParams.get('patientId');
+    const patientFullNameParam = searchParams.get('patientFullName');
+    const notesParam = searchParams.get('notes');
 
+    if (patientIdParam && !isModalOpen) {
       const dataToPrefill: Partial<MedicalTestFormData> = {
+        patientId: patientIdParam,
         patientFullName: patientFullNameParam || '',
-        consultationId: consultationIdParam,
+        consultationId: consultationIdParam || undefined,
         prescribedDate: format(new Date(), 'yyyy-MM-dd'),
         status: "Prescrit",
         notes: notesParam || `Examen prescrit suite à la consultation du ${format(new Date(), "PPP", { locale: fr })}.`,
@@ -87,8 +89,6 @@ export default function ExamensPage() {
         const newTest: MedicalTest = { 
           ...finalData, 
           id: Date.now().toString(),
-          consultationId: prefillDataForNewTest?.consultationId || finalData.consultationId,
-          patientFullName: prefillDataForNewTest?.patientFullName || finalData.patientFullName,
         };
         setMedicalTests(prev => [newTest, ...prev]);
         toast({ title: "Examen Ajouté", description: "Nouvel examen enregistré." });

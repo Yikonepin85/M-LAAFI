@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -10,10 +9,10 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Accueil', icon: LayoutDashboard },
-  { href: '/consultation', label: 'Consult.', icon: ClipboardList },
-  { href: '/medicaments', label: 'Médic.', icon: Pill },
   { href: '/patients', label: 'Patients', icon: Users },
   { href: '/rendez-vous', label: 'RDV', icon: CalendarDays },
+  { href: '/consultation', label: 'Consult', icon: ClipboardList },
+  { href: '/medicaments', label: 'Médic', icon: Pill },
   { href: '/vitals', label: 'Const.', icon: HeartPulse },
 ];
 

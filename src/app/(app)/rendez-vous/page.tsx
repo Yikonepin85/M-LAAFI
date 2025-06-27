@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AppointmentForm from '@/components/appointment/AppointmentForm';
 import FormModal from '@/components/shared/FormModal';
-import type { Appointment, Consultation } from '@/types';
+import type { Appointment, Consultation, Patient } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Edit3, Trash2, CalendarCheck2, MapPin, Phone, CalendarDays, User, ClipboardList } from 'lucide-react';
@@ -48,30 +48,32 @@ export default function RendezVousPage() {
   }, []);
   
   useEffect(() => {
-    const doctorNameParam = searchParams.get('doctorName');
     const actionParam = searchParams.get('action');
+    const doctorNameParam = searchParams.get('doctorName');
+    const consultationIdParam = searchParams.get('consultationId');
+    const patientIdParam = searchParams.get('patientId');
+    const patientFullNameParam = searchParams.get('patientFullName');
 
-    if (actionParam === 'add' && !doctorNameParam) {
+    if (actionParam === 'add' && !consultationIdParam) {
       openAddModal();
       router.replace('/rendez-vous', { scroll: false });
       return;
     }
     
-    if (doctorNameParam) { 
+    if ((consultationIdParam || patientIdParam) && !isModalOpen) { 
       const specialtyParam = searchParams.get('specialty');
       const notesParam = searchParams.get('notes');
       const dateTimeParam = searchParams.get('dateTime');
-      const consultationIdParam = searchParams.get('consultationId');
-      const patientFullNameParam = searchParams.get('patientFullName');
 
       const dataToPrefill: Partial<AppointmentFormData> = {
-        doctorName: doctorNameParam,
+        doctorName: doctorNameParam || '',
         specialty: specialtyParam || '',
         contactPhone: '', 
         dateTime: dateTimeParam || format(new Date(), "yyyy-MM-dd'T'HH:mm"),
         location: '', 
         notes: notesParam || '',
         consultationId: consultationIdParam || undefined,
+        patientId: patientIdParam || '',
         patientFullName: patientFullNameParam || '',
       };
       setPrefillDataForNewAppointment(dataToPrefill);
@@ -139,8 +141,6 @@ export default function RendezVousPage() {
         const newAppointment: Appointment = { 
           ...data, 
           id: Date.now().toString(),
-          consultationId: prefillDataForNewAppointment?.consultationId || data.consultationId,
-          patientFullName: prefillDataForNewAppointment?.patientFullName || data.patientFullName,
         };
         setAppointments(prev => [newAppointment, ...prev]);
         toast({ title: "Rendez-vous Ajouté", description: "Nouveau rendez-vous enregistré." });
@@ -249,7 +249,7 @@ export default function RendezVousPage() {
         <div id="appointment-form-in-modal">
           <AppointmentForm 
             onSubmit={handleFormSubmit} 
-            initialData={editingAppointment || (prefillDataForNewAppointment as AppointmentFormData) || undefined} 
+            initialData={editingAppointment || prefillDataForNewAppointment || undefined} 
             isSubmitting={isSubmitting}
           />
         </div>

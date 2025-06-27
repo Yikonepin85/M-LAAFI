@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ConsultationForm from '@/components/consultation/ConsultationForm';
 import BMIDisplay, { calculateBMI, getBMICategory } from '@/components/consultation/BMIDisplay';
 import FormModal from '@/components/shared/FormModal';
-import type { Consultation, Appointment, MedicalTest, Medication } from '@/types';
+import type { Consultation, Appointment, MedicalTest, Medication, Patient } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Edit3, Trash2, Stethoscope, ClipboardPlus, CalendarPlus, MapPin, ExternalLink, Pill, FlaskConical, CalendarCheck2 } from 'lucide-react';
@@ -166,6 +166,7 @@ export default function ConsultationPage() {
     const queryParams = new URLSearchParams();
     if (!consultation.patient) return;
     const patientFullName = `${consultation.patient.firstName} ${consultation.patient.lastName}`;
+    queryParams.append('patientId', consultation.patientId);
     queryParams.append('patientFullName', patientFullName);
     queryParams.append('consultationId', consultation.id);
     const consultationDate = consultation.createdAt ? parseISO(consultation.createdAt) : null;
@@ -180,6 +181,7 @@ export default function ConsultationPage() {
     const queryParams = new URLSearchParams();
     if (!consultation.patient) return;
     const patientFullName = `${consultation.patient.firstName} ${consultation.patient.lastName}`;
+    queryParams.append('patientId', consultation.patientId);
     queryParams.append('patientFullName', patientFullName);
     queryParams.append('consultationId', consultation.id);
     const consultationDate = consultation.createdAt ? parseISO(consultation.createdAt) : null;
@@ -201,6 +203,7 @@ export default function ConsultationPage() {
     }
     
     const patientFullName = `${consultation.patient.firstName} ${consultation.patient.lastName}`;
+    queryParams.append('patientId', consultation.patientId);
     queryParams.append('patientFullName', patientFullName);
 
     const defaultType = appointmentType || 'control'; // Default to 'control' if not specified by form
@@ -209,9 +212,6 @@ export default function ConsultationPage() {
     const notesForRdv = `RDV pour ${patientFullName}. Suite à la consultation du ${formattedDate}. Type de RDV: ${getAppointmentTypeText(defaultType)}.`;
     queryParams.append('notes', notesForRdv);
     
-    const suggestedDateTime = consultationDate && isValid(consultationDate) ? addWeeks(consultationDate, 1) : addWeeks(new Date(), 1);
-    suggestedDateTime.setHours(9,0,0,0); 
-    queryParams.append('dateTime', format(suggestedDateTime, "yyyy-MM-dd'T'HH:mm"));
     queryParams.append('consultationId', consultation.id);
 
     router.push(`/rendez-vous?${queryParams.toString()}`);
@@ -404,6 +404,7 @@ export default function ConsultationPage() {
                           {consultation.imc !== undefined && consultation.imcCategory && (
                             <BMIDisplay weight={consultation.vitals?.weight} height={consultation.vitals?.height} />
                           )}
+                          {consultation.medicalHistory && <p className="text-sm border-t pt-2 mt-2"><strong>Antécédents:</strong> {consultation.medicalHistory}</p>}
                           {consultation.notes && <p className="text-sm border-t pt-2 mt-2"><strong>Notes:</strong> {consultation.notes}</p>}
                         </div>
                     </div>

@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A text-to-speech AI agent.
  *
@@ -12,12 +11,12 @@ import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 import wav from 'wav';
 
-export const GenerateSpeechInputSchema = z.object({
+const GenerateSpeechInputSchema = z.object({
   text: z.string().describe('The text to be converted to speech.'),
 });
 export type GenerateSpeechInput = z.infer<typeof GenerateSpeechInputSchema>;
 
-export const GenerateSpeechOutputSchema = z.object({
+const GenerateSpeechOutputSchema = z.object({
   media: z.string().describe("A data URI for the generated audio. Expected format: 'data:audio/wav;base64,<encoded_data>'."),
 });
 export type GenerateSpeechOutput = z.infer<typeof GenerateSpeechOutputSchema>;

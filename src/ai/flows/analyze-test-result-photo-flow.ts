@@ -10,7 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const AnalyzeTestResultPhotoInputSchema = z.object({
+const AnalyzeTestResultPhotoInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
@@ -27,7 +27,7 @@ const KeyResultSchema = z.object({
     referenceRange: z.string().optional().describe("The reference range for the parameter (e.g., '13.5 - 17.5').")
 });
 
-export const AnalyzeTestResultPhotoOutputSchema = z.object({
+const AnalyzeTestResultPhotoOutputSchema = z.object({
   testName: z.string().describe("The main title or name of the medical test (e.g., 'Numération Formule Sanguine', 'Bilan Lipidique')."),
   testDate: z.string().describe("The date the test was performed, in YYYY-MM-DD format. If not found, use today's date."),
   patientName: z.string().describe("The full name of the patient as it appears on the document."),

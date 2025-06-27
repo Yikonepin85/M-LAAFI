@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -75,7 +74,7 @@ const prompt = ai.definePrompt({
   name: 'healthRecommendationsPrompt',
   input: {schema: HealthRecommendationsInputSchema},
   output: {schema: TextOutputSchema},
-  prompt: `You are an AI health assistant providing personalized health recommendations.
+  prompt: `You are an AI health assistant providing personalized health recommendations. Your responses must be in French.
 
   Analyze the user's health data, including medications, appointments, current vitals, and recent vitals history (if provided), to provide actionable recommendations.
   Explain your reasoning for each recommendation. If a vitals history is provided, try to identify any simple trends and consider them in your reasoning.

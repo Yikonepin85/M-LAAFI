@@ -40,9 +40,11 @@ export const VitalsSchema = z.object({
 });
 
 export const ConsultationSchema = z.object({
+  patientId: z.string().min(1, "La sélection d'un patient est requise."),
   caregiver: CaregiverInfoSchema,
   patient: PatientInfoSchema,
   vitals: VitalsSchema,
+  medicalHistory: z.string().optional(),
   notes: z.string().optional(),
   hasAppointment: z.boolean().optional(),
   appointmentType: z.enum(['results_presentation', 'control', '']).optional(),
@@ -66,6 +68,7 @@ export const ConsultationSchema = z.object({
 });
 
 export const MedicationSchema = z.object({
+  patientId: z.string().min(1, "Veuillez sélectionner un patient."),
   name: z.string().min(1, "Le nom du médicament est requis."),
   intakeTimes: z.array(z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Format heure invalide HH:MM")).min(1, "Au moins une heure de prise est requise."),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Date de début invalide." }),
@@ -80,6 +83,7 @@ export const MedicationSchema = z.object({
 
 
 export const AppointmentSchema = z.object({
+  patientId: z.string().min(1, "Veuillez sélectionner un patient."),
   doctorName: z.string().min(1, "Le nom du médecin est requis."),
   specialty: z.enum(MEDICAL_SPECIALTIES).optional().or(z.literal('')),
   contactPhone: z.string().optional().or(z.literal('')),
@@ -103,6 +107,7 @@ export const EmailConfigSchema = z.object({
 });
 
 export const MedicalTestSchema = z.object({
+  patientId: z.string().min(1, "Veuillez sélectionner un patient."),
   name: z.string().min(1, "Le nom de l'examen est requis."),
   patientFullName: z.string().min(1, "Le nom du patient est requis."),
   prescribedDate: z.string().refine((date) => !isNaN(Date.parse(date)), { message: "Date de prescription invalide." }),

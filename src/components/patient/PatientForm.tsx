@@ -10,15 +10,13 @@ import { GENDERS } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as UICalendar } from "@/components/ui/calendar";
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parse, parseISO, isValid, set, getDaysInMonth, setMonth } from "date-fns";
 import { fr } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 type PatientFormData = Omit<Patient, 'id'>;
 
@@ -35,14 +33,17 @@ const getInitialDate = (dateString?: string): string => {
             return format(parsed, 'yyyy-MM-dd');
         }
     }
-    return format(new Date(), 'yyyy-MM-dd');
+    // For birthDate, let's default to 30 years ago.
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() - 30);
+    return format(defaultDate, 'yyyy-MM-dd');
 };
 
 const defaultFormValues: PatientFormData = {
   firstName: '',
   lastName: '',
   sex: GENDERS[0],
-  birthDate: format(new Date(new Date().setFullYear(new Date().getFullYear() - 30)), 'yyyy-MM-dd'),
+  birthDate: getInitialDate(),
 };
 
 const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, initialData }) => {
@@ -65,87 +66,104 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, initialData }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <ScrollArea className="max-h-[70vh] p-1">
-          <div className="space-y-4 p-2">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
+        <div className="space-y-4 p-2">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Prénom</FormLabel>
+                <FormControl><Input placeholder="Ex: Fatoumata" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nom</FormLabel>
+                <FormControl><Input placeholder="Ex: Traoré" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="birthDate"
+            render={({ field }) => {
+              const selectedDate = field.value && isValid(parse(field.value, "yyyy-MM-dd", new Date()))
+                  ? parse(field.value, "yyyy-MM-dd", new Date())
+                  : parse(defaultFormValues.birthDate, "yyyy-MM-dd", new Date());
+
+              const currentYear = new Date().getFullYear();
+              const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
+              const months = Array.from({ length: 12 }, (_, i) => ({
+                value: i,
+                label: format(setMonth(new Date(), i), 'MMMM', { locale: fr }),
+              }));
+              const daysInMonth = getDaysInMonth(selectedDate);
+              const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+              const handleDatePartChange = (part: 'year' | 'month' | 'date', value: number) => {
+                  let newDate = set(selectedDate, { [part]: value });
+                  const maxDays = getDaysInMonth(newDate);
+                  if (newDate.getDate() > maxDays) {
+                      newDate = set(newDate, { date: maxDays });
+                  }
+                  field.onChange(format(newDate, "yyyy-MM-dd"));
+              };
+              
+              return (
                 <FormItem>
-                  <FormLabel>Prénom</FormLabel>
-                  <FormControl><Input placeholder="Ex: Fatoumata" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom</FormLabel>
-                  <FormControl><Input placeholder="Ex: Traoré" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="birthDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
                   <FormLabel>Date de naissance</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          {field.value && isValid(new Date(field.value)) ? format(new Date(field.value), "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <UICalendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
-                        captionLayout="dropdown-buttons"
-                        fromYear={1920}
-                        toYear={new Date().getFullYear()}
-                        initialFocus
-                        disabled={(date) => date > new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div className="grid grid-cols-3 gap-2">
+                      <Select onValueChange={(v) => handleDatePartChange('date', Number(v))} value={String(selectedDate.getDate())}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {days.map(d => <SelectItem key={d} value={String(d)}>{d}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select onValueChange={(v) => handleDatePartChange('month', Number(v))} value={String(selectedDate.getMonth())}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select onValueChange={(v) => handleDatePartChange('year', Number(v))} value={String(selectedDate.getFullYear())}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                  </div>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="sex"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sexe</FormLabel>
-                  <FormControl>
-                    <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4 pt-2">
-                      {GENDERS.map(gender => (
-                        <FormItem key={gender} className="flex items-center space-x-2">
-                          <FormControl><RadioGroupItem value={gender} id={`sex-${gender}`} /></FormControl>
-                          <Label htmlFor={`sex-${gender}`}>{gender}</Label>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </ScrollArea>
+              );
+            }}
+          />
+          <FormField
+            control={form.control}
+            name="sex"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sexe</FormLabel>
+                <FormControl>
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4 pt-2">
+                    {GENDERS.map(gender => (
+                      <FormItem key={gender} className="flex items-center space-x-2">
+                        <FormControl><RadioGroupItem value={gender} id={`sex-${gender}`} /></FormControl>
+                        <Label htmlFor={`sex-${gender}`}>{gender}</Label>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </form>
     </Form>
   );

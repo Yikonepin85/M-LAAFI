@@ -24,11 +24,13 @@ export interface Vitals {
 
 export interface Consultation {
   id: string;
+  patientId: string;
   caregiver: CaregiverInfo;
   patient: PatientInfo;
   vitals: Vitals;
   imc?: number;
   imcCategory?: string;
+  medicalHistory?: string;
   notes?: string;
   createdAt: string; // ISO date string
   hasAppointment?: boolean;
@@ -41,6 +43,7 @@ export interface Consultation {
 
 export interface Medication {
   id: string;
+  patientId: string;
   name: string;
   intakeTimes: string[]; // e.g., ["08:00", "20:00"]
   startDate: string; // ISO date string
@@ -52,6 +55,7 @@ export interface Medication {
 
 export interface Appointment {
   id: string;
+  patientId: string;
   doctorName: string;
   specialty?: MedicalSpecialty | '';
   contactPhone?: string;
@@ -64,6 +68,7 @@ export interface Appointment {
 
 export interface MedicalTest {
   id: string;
+  patientId: string;
   name: string;
   patientFullName: string;
   prescribedDate: string; // ISO date string

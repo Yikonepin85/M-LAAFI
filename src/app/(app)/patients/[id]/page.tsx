@@ -65,20 +65,18 @@ export default function PatientDetailPage() {
       return { patient: null, timelineEvents: [] };
     }
 
-    const fullName = `${currentPatient.firstName} ${currentPatient.lastName}`;
-
-    // Filter all relevant data for the patient
-    const patientConsultations = consultations.filter(c => c.patient.firstName === currentPatient.firstName && c.patient.lastName === currentPatient.lastName);
-    const patientMedications = medications.filter(m => m.patientFullName === fullName);
-    const patientMedicalTests = medicalTests.filter(t => t.patientFullName === fullName);
-    const patientAppointments = appointments.filter(a => a.patientFullName === fullName);
+    // Filter all relevant data for the patient using patientId
+    const patientConsultations = consultations.filter(c => c.patientId === id);
+    const patientMedications = medications.filter(m => m.patientId === id);
+    const patientMedicalTests = medicalTests.filter(t => t.patientId === id);
+    const patientAppointments = appointments.filter(a => a.patientId === id);
 
     // Create a flat array of all events
     const events: TimelineEvent[] = [];
-    patientConsultations.forEach(c => events.push({ type: 'consultation', date: parseISO(c.createdAt), data: c }));
-    patientAppointments.forEach(a => events.push({ type: 'appointment', date: parseISO(a.dateTime), data: a }));
-    patientMedications.forEach(m => events.push({ type: 'medication', date: parseISO(m.startDate), data: m }));
-    patientMedicalTests.forEach(t => events.push({ type: 'test', date: parseISO(t.prescribedDate), data: t }));
+    patientConsultations.forEach(c => c.createdAt && events.push({ type: 'consultation', date: parseISO(c.createdAt), data: c }));
+    patientAppointments.forEach(a => a.dateTime && events.push({ type: 'appointment', date: parseISO(a.dateTime), data: a }));
+    patientMedications.forEach(m => m.startDate && events.push({ type: 'medication', date: parseISO(m.startDate), data: m }));
+    patientMedicalTests.forEach(t => t.prescribedDate && events.push({ type: 'test', date: parseISO(t.prescribedDate), data: t }));
 
     // Sort events by date, most recent first
     const sortedEvents = events.filter(e => isValid(e.date)).sort((a, b) => compareDesc(a.date, b.date));
@@ -93,17 +91,24 @@ export default function PatientDetailPage() {
     setSummary(null);
     setSummaryError(null);
 
-    // This logic relies on the card-based layout's filtering, which is now inside useMemo.
-    // For simplicity, I'll re-filter here. In a larger app, this would be a shared selector.
-    const fullName = `${patient.firstName} ${patient.lastName}`;
-    const patientConsultations = consultations.filter(c => c.patient.firstName === patient.firstName && c.patient.lastName === patient.lastName);
-    const patientMedications = medications.filter(m => m.patientFullName === fullName);
-    const patientMedicalTests = medicalTests.filter(t => t.patientFullName === fullName);
-    const patientAppointments = appointments.filter(a => a.patientFullName === fullName);
+    // Filter data specifically for the selected patient
+    const patientConsultations = consultations.filter(c => c.patientId === id);
+    const patientMedications = medications.filter(m => m.patientId === id);
+    const patientMedicalTests = medicalTests.filter(t => t.patientId === id);
+    const patientAppointments = appointments.filter(a => a.patientId === id);
 
     try {
         const patientAge = getAgeFromBirthDate(patient.birthDate);
         const patientInfo = `Patient: ${patient.firstName} ${patient.lastName}, ${patientAge ? `${patientAge} ans` : 'âge inconnu'}, ${patient.sex}.`;
+
+        const medicalHistories = new Set(
+            patientConsultations
+                .map(c => c.medicalHistory)
+                .filter((h): h is string => !!h && h.trim() !== '')
+        );
+        const medicalHistoryStr = medicalHistories.size > 0
+            ? '- ' + Array.from(medicalHistories).join('\n- ')
+            : "Aucun antécédent médical renseigné.";
 
         const consultationsStr = patientConsultations.length > 0 ? patientConsultations.map(c => 
             `Date: ${format(parseISO(c.createdAt), "P", { locale: fr })}; Soignant: ${c.caregiver.name}; Notes: ${c.notes || 'N/A'}; ` +
@@ -133,6 +138,7 @@ export default function PatientDetailPage() {
 
         const input: PatientRecordInput = {
             patientInfo,
+            medicalHistory: medicalHistoryStr,
             consultations: consultationsStr,
             medications: medicationsStr,
             medicalTests: medicalTestsStr,

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { format, parseISO, isFuture, differenceInMinutes, isEqual, isAfter, isBefore, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowRight, CalendarClock, Pill, Stethoscope, HeartPulse, Activity } from 'lucide-react';
+import { ArrowRight, CalendarClock, Pill, Stethoscope, HeartPulse, Activity, Hospital } from 'lucide-react';
 import type { Appointment, Medication, VitalRecord } from '@/types';
 
 
@@ -165,7 +164,7 @@ export default function DashboardPage() {
                         <Activity className="text-primary"/> Actions Rapides
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                     <Button asChild variant="outline" className="flex flex-col items-center justify-center h-24 gap-1 p-2 text-center whitespace-normal">
                         <Link href="/consultation?action=add">
                             <Stethoscope className="h-6 w-6"/>
@@ -188,6 +187,12 @@ export default function DashboardPage() {
                         <Link href="/rendez-vous?action=add">
                             <CalendarClock className="h-6 w-6"/>
                             <span className="leading-tight">Nouveau RDV</span>
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="flex flex-col items-center justify-center h-24 gap-1 p-2 text-center whitespace-normal">
+                        <Link href="/pharmacies">
+                            <Hospital className="h-6 w-6"/>
+                            <span className="leading-tight">Pharmacies de Garde</span>
                         </Link>
                     </Button>
                 </CardContent>

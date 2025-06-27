@@ -168,7 +168,7 @@ export default function PatientsPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Êtes-vous sûr?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Cette action est irréversible. La suppression d'un patient ne supprimera pas ses consultations ou autres données associées existantes.
+                                Cette action est irréversible. La suppression d'un patient ne supprimera pas ses consultations ou autres données associées existantes, qui deviendront orphelines.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

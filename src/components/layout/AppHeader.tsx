@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -17,6 +16,7 @@ const getTitle = (pathname: string) => {
   if (pathname.startsWith('/examens')) return "Examens Médicaux";
   if (pathname.startsWith('/patients/')) return "Dossier Patient";
   if (pathname.startsWith('/patients')) return "Patients";
+  if (pathname.startsWith('/pharmacies')) return "Pharmacies de Garde";
   if (pathname.startsWith('/settings')) return "Paramètres";
   if (pathname.startsWith('/recommendations')) return "Recommandations IA";
   return "M'LAAFI";
